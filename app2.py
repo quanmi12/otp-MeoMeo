@@ -13,7 +13,7 @@ HTML = """
     <title>OTP Meo Meo</title>
     <style>
         body {background:#0f172a;color:white;font-family:Arial;text-align:center;}
-        .box {background:#1e293b;padding:20px;margin:50px auto;width:500px;border-radius:15px;}
+        .box {background:#1e293b;padding:20px;margin:50px auto;width:600px;border-radius:15px;}
         textarea {width:90%;height:120px;border-radius:10px;padding:10px;}
         button {background:#22c55e;border:none;padding:10px 20px;margin-top:10px;border-radius:10px;cursor:pointer;}
         
@@ -27,6 +27,7 @@ HTML = """
             font-size:18px;
             line-height:1.8;
             margin-top:10px;
+            white-space: pre-line;
         }
     </style>
 
@@ -34,7 +35,7 @@ HTML = """
         function copyAll() {
             let text = document.getElementById("otpBox").innerText;
             navigator.clipboard.writeText(text);
-            alert("Đã copy toàn bộ OTP!");
+            alert("Đã copy!");
         }
     </script>
 </head>
@@ -46,7 +47,7 @@ HTML = """
 
     <form method="post">
         <textarea name="links" placeholder="Mỗi dòng 1 link"></textarea><br>
-        <button type="submit">BÚ OTP</button>
+        <button type="submit">LẤY OTP</button>
     </form>
 
     {% if results %}
@@ -55,8 +56,8 @@ HTML = """
         <button onclick="copyAll()">COPY ALL</button>
 
         <div id="otpBox" class="result-box">
-{% for otp in results %}
-{{ otp }}
+{% for r in results %}
+{{ r }}
 {% endfor %}
         </div>
     {% endif %}
@@ -66,13 +67,23 @@ HTML = """
 </html>
 """
 
+HEADERS = {
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+}
+
 def get_otp(url):
     try:
-        res = requests.get(url, timeout=5, headers={"user-agent": "Mozilla/5.0"})
-        match = re.search(r"\\b\\d{6}\\b", res.text)
-        return match.group(0) if match else ""
+        res = requests.get(url, timeout=5, headers=HEADERS)
+
+        match = re.search(r"\d{4,6}", res.text)
+
+        if match:
+            return match.group(0)
+        else:
+            return "ĐÉO VỀ"
+
     except:
-        return ""
+        return "ĐÉO VỀ"
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -81,12 +92,8 @@ def index():
     if request.method == "POST":
         links = [l.strip() for l in request.form["links"].splitlines() if l.strip()]
 
-        with ThreadPoolExecutor(max_workers=20) as executor:
-            otps = list(executor.map(get_otp, links))
-
-        for otp in otps:
-            if otp:
-                results.append(otp)
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            results = list(executor.map(get_otp, links))
 
     return render_template_string(HTML, results=results)
 
