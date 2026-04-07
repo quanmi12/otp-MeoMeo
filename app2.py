@@ -15,15 +15,26 @@ HTML = """
         body {background:#0f172a;color:white;font-family:Arial;text-align:center;}
         .box {background:#1e293b;padding:20px;margin:50px auto;width:500px;border-radius:15px;}
         textarea {width:90%;height:120px;border-radius:10px;padding:10px;}
-        button {background:#22c55e;border:none;padding:10px 20px;margin-top:10px;border-radius:10px;}
-        .otp {background:#020617;margin:10px;padding:10px;border-radius:10px;display:flex;justify-content:space-between;}
-        .copy {background:#3b82f6;padding:5px 10px;border-radius:8px;cursor:pointer;}
+        button {background:#22c55e;border:none;padding:10px 20px;margin-top:10px;border-radius:10px;cursor:pointer;}
+        
+        .result-box {
+            background:#020617;
+            padding:15px;
+            border-radius:10px;
+            width:90%;
+            margin:auto;
+            text-align:left;
+            font-size:18px;
+            line-height:1.8;
+            margin-top:10px;
+        }
     </style>
 
     <script>
-        function copyText(text) {
+        function copyAll() {
+            let text = document.getElementById("otpBox").innerText;
             navigator.clipboard.writeText(text);
-            alert("Copied: " + text);
+            alert("Đã copy toàn bộ OTP!");
         }
     </script>
 </head>
@@ -35,17 +46,19 @@ HTML = """
 
     <form method="post">
         <textarea name="links" placeholder="Mỗi dòng 1 link"></textarea><br>
-        <button type="submit">LẤY OTP</button>
+        <button type="submit">BÚ OTP</button>
     </form>
 
     {% if results %}
         <h3>Kết quả:</h3>
-        {% for otp in results %}
-            <div class="otp">
-                <span>{{ otp }}</span>
-                <div class="copy" onclick="copyText('{{ otp }}')">COPY</div>
-            </div>
-        {% endfor %}
+
+        <button onclick="copyAll()">COPY ALL</button>
+
+        <div id="otpBox" class="result-box">
+{% for otp in results %}
+{{ otp }}
+{% endfor %}
+        </div>
     {% endif %}
 </div>
 
@@ -56,7 +69,7 @@ HTML = """
 def get_otp(url):
     try:
         res = requests.get(url, timeout=5, headers={"user-agent": "Mozilla/5.0"})
-        match = re.search(r"\b\d{6}\b", res.text)
+        match = re.search(r"\\b\\d{6}\\b", res.text)
         return match.group(0) if match else ""
     except:
         return ""
