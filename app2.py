@@ -10,57 +10,96 @@ HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>OTP Meo Meo</title>
+    <title>OTP Tool</title>
+
     <style>
-        body {background:#0f172a;color:white;font-family:Arial;text-align:center;}
-        .box {background:#1e293b;padding:20px;margin:50px auto;width:600px;border-radius:15px;}
-        textarea {width:90%;height:120px;border-radius:10px;padding:10px;}
-        button {background:#22c55e;border:none;padding:10px 20px;margin-top:10px;border-radius:10px;cursor:pointer;}
-        
-        .result-box {
+        body{
+            background:#0f172a;
+            color:white;
+            font-family:Arial;
+            text-align:center;
+        }
+
+        .box{
+            background:#1e293b;
+            width:650px;
+            margin:50px auto;
+            padding:20px;
+            border-radius:15px;
+        }
+
+        textarea{
+            width:90%;
+            height:150px;
+            padding:10px;
+            border:none;
+            border-radius:10px;
+            outline:none;
+        }
+
+        button{
+            margin-top:15px;
+            padding:10px 20px;
+            border:none;
+            border-radius:10px;
+            cursor:pointer;
+            background:#22c55e;
+            color:white;
+            font-size:16px;
+        }
+
+        .result-box{
+            margin-top:20px;
             background:#020617;
             padding:15px;
             border-radius:10px;
-            width:90%;
-            margin:auto;
             text-align:left;
-            font-size:18px;
-            line-height:1.8;
-            margin-top:10px;
-            white-space: pre-line;
+            white-space:pre-line;
         }
     </style>
 
     <script>
-        function copyAll() {
+        function copyAll(){
             let text = document.getElementById("otpBox").innerText;
             navigator.clipboard.writeText(text);
-            alert("Đã copy!");
+            alert("Đã copy");
         }
     </script>
+
 </head>
+
 <body>
 
 <div class="box">
-    <h1>⚡ OTP TOOL ⚡</h1>
-    <p>by: Meo Meo</p>
 
-    <form method="post">
-        <textarea name="links" placeholder="Mỗi dòng 1 link"></textarea><br>
+    <h1>⚡ OTP TOOL ⚡</h1>
+
+    <form method="POST">
+
+        <textarea name="links" placeholder="Mỗi dòng 1 link"></textarea>
+
+        <br>
+
         <button type="submit">LẤY OTP</button>
+
     </form>
 
     {% if results %}
-        <h3>Kết quả:</h3>
 
-        <button onclick="copyAll()">COPY ALL</button>
+    <br>
 
-        <div id="otpBox" class="result-box">
+    <button onclick="copyAll()">COPY ALL</button>
+
+    <div class="result-box" id="otpBox">
+
 {% for r in results %}
 {{ r }}
 {% endfor %}
-        </div>
+
+    </div>
+
     {% endif %}
+
 </div>
 
 </body>
@@ -68,34 +107,54 @@ HTML = """
 """
 
 HEADERS = {
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+    "User-Agent": "Mozilla/5.0"
 }
 
 def get_otp(url):
     try:
-        res = requests.get(url, timeout=5, headers=HEADERS)
+        response = requests.get(
+            url,
+            headers=HEADERS,
+            timeout=10,
+            verify=False
+        )
 
-        match = re.search(r"\d{4,6}", res.text)
+        otp = re.search(r"\b\d{4,6}\b", response.text)
 
-        if match:
-            return match.group(0)
-        else:
-            return "ĐÉO VỀ"
+        if otp:
+            return otp.group(0)
 
-    except:
         return "ĐÉO VỀ"
+
+    except Exception as e:
+        return f"ERROR: {str(e)}"
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+
     results = []
 
     if request.method == "POST":
-        links = [l.strip() for l in request.form["links"].splitlines() if l.strip()]
 
-        with ThreadPoolExecutor(max_workers=8) as executor:
+        links = request.form.get("links", "")
+
+        links = [
+            x.strip()
+            for x in links.splitlines()
+            if x.strip()
+        ]
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
             results = list(executor.map(get_otp, links))
 
-    return render_template_string(HTML, results=results)
+    return render_template_string(
+        HTML,
+        results=results
+    )
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=True
+    )
